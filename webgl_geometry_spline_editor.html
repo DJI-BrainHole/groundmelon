@@ -267,7 +267,6 @@
             new THREE.Vector3( -91.40118730204415, 176.4306956436485, -6.958271935582161 ),
             new THREE.Vector3( -383.785318791128, 491.1365363371675, 47.869296953772746 ) ] );
 
-
         loadM100();
         createSky();
     }
@@ -286,8 +285,9 @@
         if (dynamicPointMesh == null) return;
         for (var i = 0; i < dynamicPointMesh.length; i++) {
             scene.remove(dynamicPointMesh[i]);
-            delete dynamicPointMesh[i];
-            delete dynamicPoints[i];
+            dynamicPoints[i] = null;
+            dynamicPointMesh[i].material.dispose();
+            dynamicPointMesh[i].geometry.dispose();
         }
         dynamicPointMesh = [];
         dynamicPoints = [];
@@ -455,7 +455,7 @@
                         "," +  positions[i].z.toFixed() + //latitude
                         "," + positions[i].y.toFixed() + //altitude
                         ")";
-            delete textGeo[i];
+            textGeo[i].dispose();
             textGeo[i] = new THREE.TextGeometry(text,{
                 size:5,
                 height:0,
@@ -465,7 +465,8 @@
                 style:"normal"
             });
             scene.remove(textGeometryMesh[i]);
-            delete textGeometryMesh[i];
+            textGeometryMesh[i].material.dispose();
+            textGeometryMesh[i].geometry.dispose();
             textGeometryMesh[i] = new THREE.Mesh(textGeo[i],material);
             textGeometryMesh[i].position.set(positions[i].x,positions[i].y,positions[i].z);
             scene.add(textGeometryMesh[i]);
