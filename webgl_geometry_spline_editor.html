@@ -1,0 +1,539 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>three.js webgl - geometry - catmull spline editor</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+        body {
+            font-family: Monospace;
+            background-color: #f0f0f0;
+            margin: 0px;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+<script src="build/three.min.js"></script>
+<script src="js/controls/OrbitControls.js"></script>
+<script src="js/controls/TransformControls.js"></script>
+<script src="js/controls/DragControls.js"></script>
+<script src="js/renderers/Projector.js"></script>
+<script src="js/loaders/OBJMTLLoader.js"></script>
+<script src="js/loaders/MTLLoader.js"></script>
+
+<script src="js/libs/stats.min.js"></script>
+
+
+
+<script>
+
+    String.prototype.format = function () {
+
+        var str = this;
+        for ( var i = 0; i < arguments.length; i ++ ) {
+
+            str = str.replace( '{' + i + '}', arguments[ i ] );
+
+        }
+        return str;
+
+    };
+
+    var container, stats;
+    var camera, scene, renderer;
+    var splineHelperObjects = [],
+            splineOutline;
+    var splinePointsLength = 4;
+    var positions = [];
+    var options;
+
+    var shadowPoint =[];
+
+    var dynamicPoints = new Array();
+    var dynamicPointMesh = new Array();
+
+    var geometry = new THREE.BoxGeometry(5,5,5);
+
+    var ARC_SEGMENTS = 200;
+    var splineMesh;
+    var aircraft = new Aircraft();
+
+    var initLatitude = 22.3363168;
+    var initLongitude = 114.2659089;
+    var rateLongitudeRight = 0.011/512;
+    var rateLatitudeDown = -0.0102/512;
+
+    var lineMaterial = new THREE.LineBasicMaterial({
+        color: 0xFF00ff
+    });
+
+    init();
+    animate();
+
+    function cameraInit() {
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000);
+        camera.position.z = 1000;
+        scene.add(camera);
+    }
+
+    function lightInit() {
+        scene.add( new THREE.AmbientLight( 0xf0f0f0 ) );
+    }
+
+    function loadMap(latitude, longitude, x, z){
+        var texloader = new THREE.TextureLoader();
+        texloader.setCrossOrigin('');
+        var tex=texloader.load("https://maps.googleapis.com/maps/api/staticmap?center="+latitude+","+longitude+"&zoom=16&size=512x512&key=AIzaSyCC9wt1CChcOEDAuTgH10Y75Fj5l1ai2dE");
+
+        //a plane in the ground
+        var planeGeometry = new THREE.PlaneGeometry(512, 512);
+        planeGeometry.rotateX( - Math.PI / 2 );
+        var planeMaterial = new THREE.MeshBasicMaterial( { color: 0xeeeeee, map:tex } );
+
+        var plane = new THREE.Mesh( planeGeometry, planeMaterial );
+        plane.position.x = x;
+        plane.position.z = z;
+        plane.position.y = 0;
+
+        plane.receiveShadow = true;
+        scene.add( plane );
+
+    }
+
+
+    function init() {
+
+        container = document.createElement( 'div' );
+        document.body.appendChild( container );
+        scene = new THREE.Scene();
+
+        //create camera
+        cameraInit();
+
+        //create light
+        lightInit();
+
+        //loadMap(22.3363168,114.2549089,-512,0); //512 -> 0.011, longitude increase, move right
+        //loadMap(22.3363168,114.2659089,0,0);
+        //loadMap(22.3261668,114.2659089,0,512); //512->-0.0102, latitude increase, move negative up
+
+        for (var i = -2; i <= 2; i ++){
+            for (var j = -2; j <= 2; j ++){
+               setTimeout(loadMap(initLatitude+i*0.0102, initLongitude+j*0.011, 512*j,-512*i),100);
+            }
+        }
+
+        //the axis
+        var axis = new THREE.AxisHelper();
+        axis.position.set( -500, -500, -500 );
+        scene.add( axis );
+
+        renderer = new THREE.WebGLRenderer( { antialias: true } );
+        renderer.setClearColor( 0xf0f0f0 );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.shadowMap.enabled = true;
+        container.appendChild( renderer.domElement );
+
+        //for the info on top middle
+        var info = document.createElement( 'div' );
+        info.style.position = 'absolute';
+        info.style.top = '10px';
+        info.style.width = '100%';
+        info.style.textAlign = 'center';
+        info.innerHTML = 'DJI GroundStation';
+        options = document.createElement( 'div' );
+        options.style.position = 'absolute';
+        options.style.top = '30px';
+        options.style.width = '100%';
+        options.style.textAlign = 'center';
+
+        options.innerHTML = 'Waypoints: <input type="button" onclick="addPoint();" value="+" />\
+<input type="button" onclick="removePoint();" value="-" />';
+
+        container.appendChild( info );
+        container.appendChild( options );
+
+        stats = new Stats();
+        stats.domElement.style.position = 'absolute';
+        stats.domElement.style.top = '0px';
+        container.appendChild( stats.domElement );
+
+        // Controls
+        controls = new THREE.OrbitControls( camera, renderer.domElement );
+        controls.damping = 0.2;
+        controls.addEventListener( 'change', render );
+
+        transformControl = new THREE.TransformControls( camera, renderer.domElement );
+        transformControl.addEventListener( 'change', render );
+
+        scene.add( transformControl );
+
+        // Hiding transform situation is a little in a mess :()
+        transformControl.addEventListener( 'change', function( e ) {
+
+            cancelHideTransorm();
+
+        } );
+
+        transformControl.addEventListener( 'mouseDown', function( e ) {
+
+            cancelHideTransorm();
+
+        } );
+
+        transformControl.addEventListener( 'mouseUp', function( e ) {
+
+            delayHideTransform();
+
+        } );
+
+        transformControl.addEventListener( 'objectChange', function( e ) {
+
+            console.log(e);//open the menu
+            updatePath(positions);
+
+        } );
+
+        var dragcontrols = new THREE.DragControls( camera, splineHelperObjects, renderer.domElement ); //
+
+        dragcontrols.on( 'hoveron', function( e ) {
+
+            transformControl.attach( e.object );
+            cancelHideTransorm(); // *
+
+        } );
+
+        dragcontrols.on( 'hoveroff', function( e ) {
+
+            if ( e ) delayHideTransform();
+
+        } );
+
+
+        controls.addEventListener( 'start', function() {
+
+            cancelHideTransorm();
+
+        } );
+
+        controls.addEventListener( 'end', function() {
+
+            delayHideTransform();
+
+        } );
+
+        var hiding;
+
+        function delayHideTransform() {
+
+            cancelHideTransorm();
+            hideTransform();
+
+        }
+
+        function hideTransform() {
+
+            hiding = setTimeout( function() {
+
+                transformControl.detach( transformControl.object );
+
+            }, 2500 )
+
+        }
+
+        function cancelHideTransorm() {
+
+            if ( hiding ) clearTimeout( hiding );
+
+        }
+
+        load( [ new THREE.Vector3(0,0,0),
+            new THREE.Vector3( 289.76843686945404, 452.51481137238443, 56.10018915737797 ),
+            new THREE.Vector3( -53.56300074753207, 171.49711742836848, -14.495472686253045 ),
+            new THREE.Vector3( -91.40118730204415, 176.4306956436485, -6.958271935582161 ),
+            new THREE.Vector3( -383.785318791128, 491.1365363371675, 47.869296953772746 ) ] );
+
+
+        loadM100();
+        createSky();
+    }
+
+    function updatePath(position) {
+        //clear
+        clearFlyPath();
+
+        //draw
+        for (var i = 0; i < position.length; i++){
+            drawDynamicPath(position[i]);
+        }
+    }
+
+    function clearFlyPath() {
+        if (dynamicPointMesh == null) return;
+        for (var i = 0; i < dynamicPointMesh.length; i++) {
+            scene.remove(dynamicPointMesh[i]);
+        }
+        dynamicPointMesh = [];
+        dynamicPoints = [];
+    }
+
+    function drawDynamicPath(p) {
+        if (dynamicPoints == null || dynamicPointMesh == null)
+            return;
+        if (dynamicPoints.length > 0) {
+            // check if new position is near to last point, if is, return
+            var last_p = dynamicPoints[dynamicPoints.length - 1];
+            var v_diff = new THREE.Vector3();
+            v_diff.subVectors(p, last_p);
+            if (v_diff.length() < 0.1)
+                return;
+
+            var g = new THREE.Geometry();
+            g.vertices.push(dynamicPoints[dynamicPoints.length - 1]);
+            g.vertices.push(p);
+            var m = new THREE.Line(g, lineMaterial);
+            scene.add(m);
+            dynamicPointMesh.push(m);
+        }
+        dynamicPoints.push(p);
+
+        if (dynamicPointMesh.length > 2000) {
+            scene.remove(dynamicPointMesh.shift());
+        }
+        if (dynamicPoints.length > 3000) {
+            dynamicPoints.shift();
+        }
+    }
+
+    function Aircraft() {
+        this.object = null;
+        this.scale = 1;
+        this.transform_base = new THREE.Matrix4();
+        this.transform = new THREE.Matrix4();
+        this.rotationM = new THREE.Matrix4();
+        this.position = new THREE.Vector3();
+        this.Reset = function () {
+            this.transform.copy(this.transform_base);
+        };
+
+        var scope = this;
+
+        this.Update = function () {
+            if (scope.object == null)
+                return;
+            scope.object.scale.set(scope.scale, scope.scale, scope.scale);
+            scope.rotationM.extractRotation(scope.transform);
+            scope.object.rotation.setFromRotationMatrix(scope.rotationM);
+            scope.object.position.setFromMatrixPosition(scope.transform);
+        };
+        this.SetCurrentAsInitial = function () {
+            this.transform_base.copy(this.transform);
+        };
+        this.SetScale = function (s) {
+            this.scale = s;
+            this.Update();
+        };
+        this.SetATTI = function (q) {
+            var m = new THREE.Matrix4();
+            m.makeRotationFromQuaternion(q);
+            m.multiply(this.transform);
+            this.transform.copy(m);
+            this.Update();
+        };
+        this.SetPosition = function (p) {
+            this.position.copy(p);
+            this.transform.setPosition(p);
+            this.Update();
+        };
+
+        this.Unload = function(){
+            if (this.object != null) {
+                scene.remove(this.object);
+                this.object = null;
+            }
+        };
+    }
+    function loadM100() {
+        var loader = new THREE.OBJMTLLoader();
+        loader.load( 'data/m100_body.obj', 'data/m100_body.mtl', function ( object ) {
+            aircraft.Unload();
+            aircraft.object = object;
+            aircraft.transform.makeRotationX(-Math.PI / 2);
+            var r = new THREE.Matrix4();
+            r.makeRotationZ(-Math.PI / 2);
+            aircraft.transform.multiply(r);
+            aircraft.SetScale(100); //needs to modify
+            aircraft.SetCurrentAsInitial();
+            aircraft.Update();
+            scene.add( object );
+        });
+    }
+    function createSky() {
+        var path = "data/";
+        var format = '.jpg';
+        var urls = [
+            path + 'px' + format, path + 'nx' + format,
+            path + 'py' + format, path + 'ny' + format,
+            path + 'pz' + format, path + 'nz' + format
+        ];
+
+        var textureCube = THREE.ImageUtils.loadTextureCube(urls);
+
+        var shader = THREE.ShaderLib["cube"];
+        shader.uniforms["tCube"].value = textureCube;
+
+        // We're inside the box, so make sure to render the backsides
+        // It will typically be rendered first in the scene and without depth so anything else will be drawn in front
+        var material = new THREE.ShaderMaterial({
+            fragmentShader : shader.fragmentShader,
+            vertexShader   : shader.vertexShader,
+            uniforms       : shader.uniforms,
+            depthWrite     : false,
+            side           : THREE.BackSide
+        });
+
+        // The box dimension size doesn't matter that much when the camera is in the center.  Experiment with the values.
+        var skyMesh = new THREE.Mesh( new THREE.CubeGeometry( 10000, 10000, 10000, 1, 1, 1 ), material );
+        skyMesh.renderDepth = -10;
+
+
+        scene.add(skyMesh);
+    }
+
+    function addSplineObject( position ) {
+
+        var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( {
+            color: Math.random() * 0xffffff
+        } ) );
+        object.material.ambient = object.material.color;
+        if ( position ) {
+
+            object.position.copy( position );
+
+        } else {
+
+            object.position.x = Math.random() * 1000 - 500;
+            object.position.y = Math.random() * 600;
+            object.position.z = Math.random() * 800 - 400;
+
+        }
+
+        object.castShadow = true;
+        object.receiveShadow = true;
+        object.my_mash = true;
+        scene.add( object );
+        splineHelperObjects.push( object );
+        return object;
+
+    }
+
+    function updateShadow(){
+        for (var i = 0; i < positions.length;i++){
+            shadowPoint[i].position.set(positions[i].x,0,positions[i].z);
+        }
+    }
+
+    function addPoint() {
+
+        splinePointsLength ++;
+        positions.push( addSplineObject()
+                .position );
+        var geometry = new THREE.TorusGeometry(2,1.2,5,36);
+        var material = new THREE.MeshBasicMaterial({color: 0xff0000});
+        var torus = new THREE.Mesh(geometry, material);
+        torus.rotateX (- Math.PI / 2);
+
+        shadowPoint.push(torus);
+        shadowPoint[shadowPoint.length-1].position.set(positions[positions.length-1].x,0,positions[positions.length-1].z);
+        console.log(shadowPoint[shadowPoint.length-1]);
+        scene.add(shadowPoint[shadowPoint.length-1]);
+
+        updatePath(positions);
+
+    }
+
+    function removePoint() {
+
+        if ( splinePointsLength <= 4 ) {
+
+            return;
+
+        }
+        splinePointsLength --;
+        positions.pop();
+        scene.remove(shadowPoint[shadowPoint.length-1]);
+        shadowPoint.pop(new THREE.PointLight(0xff0000,1,100));
+        scene.remove( splineHelperObjects.pop() );
+
+        updatePath(positions);
+
+    }
+
+
+    function exportSpline() {
+
+        var p;
+        var strplace = [];
+        for ( i = 0; i < splinePointsLength; i ++ ) {
+
+            p = splineHelperObjects[ i ].position;
+            strplace.push( 'new THREE.Vector3({0}, {1}, {2})'.format( p.x, p.y, p.z ) )
+
+        }
+        console.log( strplace.join( ',\n' ) );
+        var code = '[' + ( strplace.join( ',\n\t' ) ) + ']';
+        prompt( 'copy and paste code', code );
+
+    }
+
+    function load( new_positions ) {
+
+        while ( new_positions.length > positions.length ) {
+
+            addPoint();
+
+        }
+
+        while ( new_positions.length < positions.length ) {
+
+            removePoint();
+
+        }
+
+        for ( i = 0; i < positions.length; i ++ ) {
+
+            positions[ i ].copy( new_positions[ i ] );
+
+        }
+
+        updatePath(positions);
+
+    }
+
+    function animate() {
+
+        requestAnimationFrame( animate );
+        render();
+        stats.update();
+        controls.update();
+        transformControl.update();
+        updatePath(positions);
+        updateShadow();
+
+        //console.log(camera.position);
+
+    }
+
+    function render() {
+
+        renderer.render( scene, camera );
+
+    }
+
+</script>
+
+</body>
+</html>
