@@ -16,13 +16,17 @@
 </head>
 <body>
 
-<script src="build/three.min.js"></script>
+<script src="js/three.js"></script>
 <script src="js/controls/OrbitControls.js"></script>
 <script src="js/controls/TransformControls.js"></script>
 <script src="js/controls/DragControls.js"></script>
 <script src="js/renderers/Projector.js"></script>
 <script src="js/loaders/OBJMTLLoader.js"></script>
 <script src="js/loaders/MTLLoader.js"></script>
+<script src="js/geometries/TextGeometry.js"></script>
+<script src="js/utils/FontUtils.js"></script>
+<script src="js/fonts/helvetiker_bold.typeface.js"></script>
+<script src="js/fonts/helvetiker_regular.typeface.js"></script>
 
 <script src="js/libs/stats.min.js"></script>
 
@@ -51,6 +55,9 @@
     var options;
 
     var shadowPoint =[];
+    var text = "";
+    var textGeo = [];
+    var textGeometryMesh=[];
 
     var dynamicPoints = new Array();
     var dynamicPointMesh = new Array();
@@ -66,9 +73,11 @@
     var rateLongitudeRight = 0.011/512;
     var rateLatitudeDown = -0.0102/512;
 
+
     var lineMaterial = new THREE.LineBasicMaterial({
         color: 0xFF00ff
     });
+    var material = new THREE.MeshBasicMaterial({color: 0xff0000});
 
     init();
     animate();
@@ -194,6 +203,8 @@
 
             console.log(e);//open the menu
             updatePath(positions);
+            updateText();
+            updateShadow();
 
         } );
 
@@ -275,6 +286,8 @@
         if (dynamicPointMesh == null) return;
         for (var i = 0; i < dynamicPointMesh.length; i++) {
             scene.remove(dynamicPointMesh[i]);
+            delete dynamicPointMesh[i];
+            delete dynamicPoints[i];
         }
         dynamicPointMesh = [];
         dynamicPoints = [];
@@ -436,23 +449,58 @@
         }
     }
 
-    function addPoint() {
+    function updateText(){
+        for (var i = 0; i < positions.length;i++) {
+            text = "(" + positions[i].x.toFixed() + //longitude
+                        "," +  positions[i].z.toFixed() + //latitude
+                        "," + positions[i].y.toFixed() + //altitude
+                        ")";
+            delete textGeo[i];
+            textGeo[i] = new THREE.TextGeometry(text,{
+                size:5,
+                height:0,
+                font:"helvetiker",
+                curveSegments:1,
+                weight:"normal",
+                style:"normal"
+            });
+            scene.remove(textGeometryMesh[i]);
+            delete textGeometryMesh[i];
+            textGeometryMesh[i] = new THREE.Mesh(textGeo[i],material);
+            textGeometryMesh[i].position.set(positions[i].x,positions[i].y,positions[i].z);
+            scene.add(textGeometryMesh[i]);
+        }
+    }
 
+    function addPoint() {
+        //push point into positions
         splinePointsLength ++;
-        positions.push( addSplineObject()
-                .position );
+        var point = addSplineObject();
+        positions.push( point.position );
+
+        //push its new shadow
         var geometry = new THREE.TorusGeometry(2,1.2,5,36);
-        var material = new THREE.MeshBasicMaterial({color: 0xff0000});
         var torus = new THREE.Mesh(geometry, material);
         torus.rotateX (- Math.PI / 2);
-
         shadowPoint.push(torus);
-        shadowPoint[shadowPoint.length-1].position.set(positions[positions.length-1].x,0,positions[positions.length-1].z);
-        console.log(shadowPoint[shadowPoint.length-1]);
         scene.add(shadowPoint[shadowPoint.length-1]);
 
-        updatePath(positions);
+        //push its text
+        textGeo.push(new THREE.TextGeometry(text,{
+            size:5,
+            height:1,
+            font:"helvetiker",
+            curveSegments:5,
+            weight:"normal",
+            stype:"normal"
+        }));
+        textGeometryMesh.push(new THREE.Mesh(textGeo[textGeo.length-1],material));
+        scene.add(textGeometryMesh[textGeometryMesh.length-1]);
 
+        //update the path
+        updatePath(positions);
+        updateShadow();
+        updateText();
     }
 
     function removePoint() {
@@ -464,12 +512,14 @@
         }
         splinePointsLength --;
         positions.pop();
-        scene.remove(shadowPoint[shadowPoint.length-1]);
-        shadowPoint.pop(new THREE.PointLight(0xff0000,1,100));
-        scene.remove( splineHelperObjects.pop() );
+        scene.remove(shadowPoint.pop());
+        scene.remove(splineHelperObjects.pop() );
+        scene.remove(textGeometryMesh.pop());
+        textGeo.pop();
 
         updatePath(positions);
-
+        updateShadow();
+        updateText();
     }
 
 
@@ -508,22 +558,19 @@
             positions[ i ].copy( new_positions[ i ] );
 
         }
-
+        updateShadow();
+        updateText();
         updatePath(positions);
-
     }
 
     function animate() {
 
         requestAnimationFrame( animate );
-        render();
         stats.update();
         controls.update();
         transformControl.update();
-        updatePath(positions);
-        updateShadow();
+        render();
 
-        //console.log(camera.position);
 
     }
 
