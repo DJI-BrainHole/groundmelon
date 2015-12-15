@@ -59,8 +59,8 @@
     var textGeo = [];
     var textGeometryMesh=[];
 
-    var dynamicPoints = new Array();
-    var dynamicPointMesh = new Array();
+    var dynamicPoints = [];
+    var dynamicPointMesh = [];
 
     var geometry = new THREE.BoxGeometry(5,5,5);
 
@@ -73,6 +73,7 @@
     var rateLongitudeRight = 0.011/512;
     var rateLatitudeDown = -0.0102/512;
 
+    var mapPlane = [];
 
     var lineMaterial = new THREE.LineBasicMaterial({
         color: 0xFF00ff
@@ -92,10 +93,11 @@
         scene.add( new THREE.AmbientLight( 0xf0f0f0 ) );
     }
 
-    function loadMap(latitude, longitude, x, z){
+    function loadMap(latitude, longitude, x, z, index){
         var texloader = new THREE.TextureLoader();
         texloader.setCrossOrigin('');
         var tex=texloader.load("https://maps.googleapis.com/maps/api/staticmap?center="+latitude+","+longitude+"&zoom=16&size=512x512&key=AIzaSyCC9wt1CChcOEDAuTgH10Y75Fj5l1ai2dE");
+        //var tex = texloader.load("https://api.mapbox.com/v4/mapbox.streets/"+longitude+","+latitude+",16/1024x1024.png128?access_token=pk.eyJ1IjoibGFueXVzZWEiLCJhIjoiY2lpNnJtYzdoMDF1ZnRybTA0bTZlMmNtciJ9.9fKQNjEiRCCkSCXpMBWK1w");
 
         //a plane in the ground
         var planeGeometry = new THREE.PlaneGeometry(512, 512);
@@ -109,7 +111,14 @@
 
         plane.receiveShadow = true;
         scene.add( plane );
+        mapPlane[index] = plane;
+    }
 
+    function updateMap(){
+        for (var t = 0; t < mapPlane.length; t++){
+            mapPlane[t].position.x = camera.position.x + mapPlane[t].offset_x;
+            mapPlane[t].position.z = camera.position.z-1000 + mapPlane[t].offset_z;
+        }
     }
 
 
@@ -129,9 +138,13 @@
         //loadMap(22.3363168,114.2659089,0,0);
         //loadMap(22.3261668,114.2659089,0,512); //512->-0.0102, latitude increase, move negative up
 
-        for (var i = -2; i <= 2; i ++){
-            for (var j = -2; j <= 2; j ++){
-               setTimeout(loadMap(initLatitude+i*0.0102, initLongitude+j*0.011, 512*j,-512*i),100);
+        var t = 0;
+        for (var i = -1; i <= 1; i ++){
+            for (var j = -1; j <= 1; j ++){
+                loadMap(initLatitude+i*0.0102, initLongitude+j*0.011, 512*j,-512*i, t);
+                mapPlane[mapPlane.length-1].offset_x = 512*j;
+                mapPlane[mapPlane.length-1].offset_z = -512*i;
+                t += 1;
             }
         }
 
@@ -213,7 +226,7 @@
         dragcontrols.on( 'hoveron', function( e ) {
 
             transformControl.attach( e.object );
-            cancelHideTransorm(); // *
+            cancelHideTransorm();
 
         } );
 
@@ -416,6 +429,7 @@
         scene.add(skyMesh);
     }
 
+
     function addSplineObject( position ) {
 
         var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( {
@@ -524,22 +538,6 @@
     }
 
 
-    function exportSpline() {
-
-        var p;
-        var strplace = [];
-        for ( i = 0; i < splinePointsLength; i ++ ) {
-
-            p = splineHelperObjects[ i ].position;
-            strplace.push( 'new THREE.Vector3({0}, {1}, {2})'.format( p.x, p.y, p.z ) )
-
-        }
-        console.log( strplace.join( ',\n' ) );
-        var code = '[' + ( strplace.join( ',\n\t' ) ) + ']';
-        prompt( 'copy and paste code', code );
-
-    }
-
     function load( new_positions ) {
 
         while ( new_positions.length > positions.length ) {
@@ -566,12 +564,12 @@
 
     function animate() {
 
+        updateMap();
         requestAnimationFrame( animate );
         stats.update();
         controls.update();
         transformControl.update();
         render();
-
 
     }
 
