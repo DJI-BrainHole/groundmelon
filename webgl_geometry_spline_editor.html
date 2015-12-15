@@ -94,6 +94,8 @@
     }
 
     function loadMap(latitude, longitude, x, z, index){
+        scene.remove(mapPlane[index]);
+
         var texloader = new THREE.TextureLoader();
         texloader.setCrossOrigin('');
         var tex=texloader.load("https://maps.googleapis.com/maps/api/staticmap?center="+latitude+","+longitude+"&zoom=16&size=512x512&key=AIzaSyCC9wt1CChcOEDAuTgH10Y75Fj5l1ai2dE");
@@ -112,13 +114,35 @@
         plane.receiveShadow = true;
         scene.add( plane );
         mapPlane[index] = plane;
+        console.log("loaded")
     }
 
     function updateMap(){
-        for (var t = 0; t < mapPlane.length; t++){
-            mapPlane[t].position.x = camera.position.x + mapPlane[t].offset_x;
-            mapPlane[t].position.z = camera.position.z-1000 + mapPlane[t].offset_z;
+        var newLatitude = initLatitude + (camera.position.z-1000)*rateLatitudeDown;
+        var newLongitude = initLongitude + camera.position.x*rateLongitudeRight;
+
+        var t = 0;
+        for (var i = -1; i <= 1; i ++){
+            for (var j = -1; j <= 1; j ++){
+                console.log(mapPlane[t].offset_x+camera.position.x);
+                console.log(mapPlane[t].offset_z+camera.position.z);
+                loadMap(newLatitude+i*0.0102,
+                        newLongitude+j*0.011,
+                        mapPlane[t].offset_x + camera.position.x,
+                        mapPlane[t].offset_z + camera.position.z - 1000,
+                        t);
+                //mapPlane[t].position.x = ( mapPlane[t].offset_x + camera.position.x);
+                //mapPlane[t].position.z = ( mapPlane[t].offset_z + camera.position.z - 1000);
+                console.log(mapPlane[t].position.x);
+                console.log(mapPlane[t].position.z);
+                t += 1;
+            }
         }
+        //Debug:
+        //loadMap(newLatitude, newLongitude, 0, 0, 0);
+        //mapPlane[0].position.x = camera.position.x;
+        //mapPlane[0].position.z = camera.position.z-1000;
+
     }
 
 
@@ -142,11 +166,13 @@
         for (var i = -1; i <= 1; i ++){
             for (var j = -1; j <= 1; j ++){
                 loadMap(initLatitude+i*0.0102, initLongitude+j*0.011, 512*j,-512*i, t);
-                mapPlane[mapPlane.length-1].offset_x = 512*j;
-                mapPlane[mapPlane.length-1].offset_z = -512*i;
+                mapPlane[t].offset_x = 512*j;
+                mapPlane[t].offset_z = -512*i;
                 t += 1;
             }
         }
+        //Debug:
+        //loadMap(initLatitude, initLongitude, 0, 0, 0);
 
         //the axis
         var axis = new THREE.AxisHelper();
@@ -195,7 +221,6 @@
 
         // Hiding transform situation is a little in a mess :()
         transformControl.addEventListener( 'change', function( e ) {
-
             cancelHideTransorm();
 
         } );
@@ -207,7 +232,6 @@
         } );
 
         transformControl.addEventListener( 'mouseUp', function( e ) {
-
             delayHideTransform();
 
         } );
@@ -246,8 +270,10 @@
         controls.addEventListener( 'end', function() {
 
             delayHideTransform();
+            updateMap();
 
         } );
+
 
         var hiding;
 
@@ -564,7 +590,6 @@
 
     function animate() {
 
-        updateMap();
         requestAnimationFrame( animate );
         stats.update();
         controls.update();
