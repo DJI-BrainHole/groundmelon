@@ -74,6 +74,8 @@
     var rateLatitudeDown = -0.0102/512;
 
     var mapPlane = [];
+    var mapOffsetX = [];
+    var mapOffsetZ = [];
 
     var lineMaterial = new THREE.LineBasicMaterial({
         color: 0xFF00ff
@@ -114,7 +116,6 @@
         plane.receiveShadow = true;
         scene.add( plane );
         mapPlane[index] = plane;
-        console.log("loaded")
     }
 
     function updateMap(){
@@ -124,12 +125,10 @@
         var t = 0;
         for (var i = -1; i <= 1; i ++){
             for (var j = -1; j <= 1; j ++){
-                console.log(mapPlane[t].offset_x+camera.position.x);
-                console.log(mapPlane[t].offset_z+camera.position.z);
                 loadMap(newLatitude+i*0.0102,
                         newLongitude+j*0.011,
-                        mapPlane[t].offset_x + camera.position.x,
-                        mapPlane[t].offset_z + camera.position.z - 1000,
+                        mapOffsetX[t] + camera.position.x,
+                        mapOffsetZ[t] + camera.position.z - 1000,
                         t);
                 //mapPlane[t].position.x = ( mapPlane[t].offset_x + camera.position.x);
                 //mapPlane[t].position.z = ( mapPlane[t].offset_z + camera.position.z - 1000);
@@ -166,8 +165,8 @@
         for (var i = -1; i <= 1; i ++){
             for (var j = -1; j <= 1; j ++){
                 loadMap(initLatitude+i*0.0102, initLongitude+j*0.011, 512*j,-512*i, t);
-                mapPlane[t].offset_x = 512*j;
-                mapPlane[t].offset_z = -512*i;
+                mapOffsetX[t] = 512*j;
+                mapOffsetZ[t] = -512*i;
                 t += 1;
             }
         }
