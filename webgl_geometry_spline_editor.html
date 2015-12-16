@@ -122,18 +122,20 @@
         var newLatitude = initLatitude + (camera.position.z-1000)*rateLatitudeDown;
         var newLongitude = initLongitude + camera.position.x*rateLongitudeRight;
 
+        var roll = camera.rotation.y;//
+        var pitch = camera.rotation.x;//[-pi, 0]
+        var yaw = camera.rotation.z;//[0,pi)(-pi,0]
+        console.log(roll,pitch,yaw);
+
         var t = 0;
         for (var i = -1; i <= 1; i ++){
             for (var j = -1; j <= 1; j ++){
                 loadMap(newLatitude+i*0.0102,
                         newLongitude+j*0.011,
-                        mapOffsetX[t] + camera.position.x,
-                        mapOffsetZ[t] + camera.position.z - 1000,
+                        mapOffsetX[t] + camera.position.x - 1500*Math.sin(roll),
+                        mapOffsetZ[t] + camera.position.z - 1500*Math.cos(pitch)*Math.cos(roll),
+                        //camera mode is a completed mystery, I have to *Math.cos(roll) for movement on z-axis.
                         t);
-                //mapPlane[t].position.x = ( mapPlane[t].offset_x + camera.position.x);
-                //mapPlane[t].position.z = ( mapPlane[t].offset_z + camera.position.z - 1000);
-                console.log(mapPlane[t].position.x);
-                console.log(mapPlane[t].position.z);
                 t += 1;
             }
         }
