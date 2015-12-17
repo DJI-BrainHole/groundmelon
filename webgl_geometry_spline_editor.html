@@ -74,8 +74,7 @@
     var rateLatitudeDown = -0.0102/512;
 
     var mapPlane = [];
-    var mapOffsetX = [];
-    var mapOffsetZ = [];
+    var mapLocation = [];
 
     var lineMaterial = new THREE.LineBasicMaterial({
         color: 0xFF00ff
@@ -95,60 +94,59 @@
         scene.add( new THREE.AmbientLight( 0xf0f0f0 ) );
     }
 
-    function loadMap(latitude, longitude, x, z, index){
-        scene.remove(mapPlane[index]);
+    function loadMap(latitude, longitude, x, z){
+        for (var i = 0; i < mapLocation.length; i++){
+            if((x == mapLocation[i].X) && (z == mapLocation[i].Z)){
+               return;
+            }
+        }
 
         var texloader = new THREE.TextureLoader();
         texloader.setCrossOrigin('');
-        var tex=texloader.load("https://maps.googleapis.com/maps/api/staticmap?center="+latitude+","+longitude+"&zoom=16&size=512x512&key=AIzaSyCC9wt1CChcOEDAuTgH10Y75Fj5l1ai2dE");
-        //var tex = texloader.load("https://api.mapbox.com/v4/mapbox.streets/"+longitude+","+latitude+",16/1024x1024.png128?access_token=pk.eyJ1IjoibGFueXVzZWEiLCJhIjoiY2lpNnJtYzdoMDF1ZnRybTA0bTZlMmNtciJ9.9fKQNjEiRCCkSCXpMBWK1w");
+        var tex = texloader.load("https://maps.googleapis.com/maps/api/staticmap?center=" + latitude + "," + longitude + "&zoom=16&size=512x512&key=AIzaSyCC9wt1CChcOEDAuTgH10Y75Fj5l1ai2dE");
+        //var tex = texloader.load("https://api.mapbox.com/v4/mapbox.streets/"+longitude+","+latitude+",16/512x512.png128?access_token=pk.eyJ1IjoibGFueXVzZWEiLCJhIjoiY2lpNnJtYzdoMDF1ZnRybTA0bTZlMmNtciJ9.9fKQNjEiRCCkSCXpMBWK1w");
 
         //a plane in the ground
         var planeGeometry = new THREE.PlaneGeometry(512, 512);
-        planeGeometry.rotateX( - Math.PI / 2 );
-        var planeMaterial = new THREE.MeshBasicMaterial( { color: 0xeeeeee, map:tex } );
+        planeGeometry.rotateX(-Math.PI / 2);
+        var planeMaterial = new THREE.MeshBasicMaterial({color: 0xeeeeee, map: tex});
 
-        var plane = new THREE.Mesh( planeGeometry, planeMaterial );
+        var plane = new THREE.Mesh(planeGeometry, planeMaterial);
         plane.position.x = x;
         plane.position.z = z;
         plane.position.y = 0;
 
         plane.receiveShadow = true;
-        scene.add( plane );
-        mapPlane[index] = plane;
+        scene.add(plane);
+        mapPlane.push(plane);
+
+        var mapCoordinate = {X: x, Z: z};
+        mapLocation.push(mapCoordinate);
     }
 
     function updateMap(){
         var roll = camera.rotation.y;//
         var pitch = camera.rotation.x;//[-pi, 0]
         var yaw = camera.rotation.z;//[0,pi)(-pi,0]
-        console.log(roll,pitch,yaw);
 
         //unit is 512
         var newCenterX = ((camera.position.x - 1000*Math.sin(roll))/512).toFixed()*512;
         var newCenterZ = ((camera.position.z - 1000*Math.cos(pitch)*Math.cos(roll))/512).toFixed()*512;
+        //camera mode is a completed mystery, I have to *Math.cos(roll) for movement on z-axis.
 
+        //latitude/longitude for the center point
         var newLatitude = initLatitude + newCenterZ*rateLatitudeDown;
         var newLongitude = initLongitude + newCenterX*rateLongitudeRight;
 
-
-        var t = 0;
         for (var i = -1; i <= 1; i ++){
             for (var j = -1; j <= 1; j ++){
                 loadMap(newLatitude+i*0.0102,
                         newLongitude+j*0.011,
-                        mapOffsetX[t] + newCenterX,
-                        mapOffsetZ[t] + newCenterZ,
-                        //camera mode is a completed mystery, I have to *Math.cos(roll) for movement on z-axis.
-                        t);
-                t += 1;
+                        512*j  + newCenterX,
+                        -512*i + newCenterZ
+                        );
             }
         }
-        //Debug:
-        //loadMap(newLatitude, newLongitude, 0, 0, 0);
-        //mapPlane[0].position.x = camera.position.x;
-        //mapPlane[0].position.z = camera.position.z-1000;
-
     }
 
 
@@ -168,13 +166,9 @@
         //loadMap(22.3363168,114.2659089,0,0);
         //loadMap(22.3261668,114.2659089,0,512); //512->-0.0102, latitude increase, move negative up
 
-        var t = 0;
         for (var i = -1; i <= 1; i ++){
             for (var j = -1; j <= 1; j ++){
-                loadMap(initLatitude+i*0.0102, initLongitude+j*0.011, 512*j,-512*i, t);
-                mapOffsetX[t] = 512*j;
-                mapOffsetZ[t] = -512*i;
-                t += 1;
+                loadMap(initLatitude+i*0.0102, initLongitude+j*0.011, 512*j,-512*i);
             }
         }
         //Debug:
@@ -427,7 +421,6 @@
             aircraft.SetCurrentAsInitial();
             aircraft.Update();
             scene.add( object );
-            console.log("loaded")
         });
     }
     function createSky() {
