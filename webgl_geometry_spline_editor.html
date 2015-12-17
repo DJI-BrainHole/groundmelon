@@ -119,21 +119,22 @@
     }
 
     function updateMap(){
-        var newLatitude = initLatitude + (camera.position.z-1000)*rateLatitudeDown;
-        var newLongitude = initLongitude + camera.position.x*rateLongitudeRight;
-
         var roll = camera.rotation.y;//
         var pitch = camera.rotation.x;//[-pi, 0]
         var yaw = camera.rotation.z;//[0,pi)(-pi,0]
         console.log(roll,pitch,yaw);
+
+        var newLatitude = initLatitude + (camera.position.z - 1000*Math.cos(pitch)*Math.cos(roll))*rateLatitudeDown;
+        var newLongitude = initLongitude + (camera.position.x - 1000*Math.sin(roll))*rateLongitudeRight;
+
 
         var t = 0;
         for (var i = -1; i <= 1; i ++){
             for (var j = -1; j <= 1; j ++){
                 loadMap(newLatitude+i*0.0102,
                         newLongitude+j*0.011,
-                        mapOffsetX[t] + camera.position.x - 1500*Math.sin(roll),
-                        mapOffsetZ[t] + camera.position.z - 1500*Math.cos(pitch)*Math.cos(roll),
+                        mapOffsetX[t] + camera.position.x - 1000*Math.sin(roll),
+                        mapOffsetZ[t] + camera.position.z - 1000*Math.cos(pitch)*Math.cos(roll),
                         //camera mode is a completed mystery, I have to *Math.cos(roll) for movement on z-axis.
                         t);
                 t += 1;
@@ -422,6 +423,7 @@
             aircraft.SetCurrentAsInitial();
             aircraft.Update();
             scene.add( object );
+            console.log("loaded")
         });
     }
     function createSky() {
