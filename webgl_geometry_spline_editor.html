@@ -55,7 +55,6 @@
     var options;
 
     var shadowPoint =[];
-    var text = "";
     var textGeo = [];
     var textGeometryMesh=[];
 
@@ -65,13 +64,14 @@
     var geometry = new THREE.BoxGeometry(5,5,5);
 
     var ARC_SEGMENTS = 200;
-    var splineMesh;
     var aircraft = new Aircraft();
 
     var initLatitude = 22.3363168;
     var initLongitude = 114.2659089;
-    var rateLongitudeRight = 0.011/512;
-    var rateLatitudeDown = -0.0102/512;
+
+    var scale = 18;  //default scaler
+    var rateLongitudeRight = 0.011/Math.pow(2,scale-7);// (/512)->16;
+    var rateLatitudeDown = -0.0102/Math.pow(2,scale-7);// (/512)->16;
 
     var mapPlane = [];
     var mapLocation = [];
@@ -103,7 +103,7 @@
 
         var texloader = new THREE.TextureLoader();
         texloader.setCrossOrigin('');
-        var tex = texloader.load("https://maps.googleapis.com/maps/api/staticmap?center=" + latitude + "," + longitude + "&zoom=16&size=512x512&key=AIzaSyCC9wt1CChcOEDAuTgH10Y75Fj5l1ai2dE");
+        var tex = texloader.load("https://maps.googleapis.com/maps/api/staticmap?center=" + latitude + "," + longitude + "&zoom="+ scale + "&size=512x512&key=AIzaSyCC9wt1CChcOEDAuTgH10Y75Fj5l1ai2dE");
         //var tex = texloader.load("https://api.mapbox.com/v4/mapbox.streets/"+longitude+","+latitude+",16/512x512.png128?access_token=pk.eyJ1IjoibGFueXVzZWEiLCJhIjoiY2lpNnJtYzdoMDF1ZnRybTA0bTZlMmNtciJ9.9fKQNjEiRCCkSCXpMBWK1w");
 
         //a plane in the ground
@@ -124,6 +124,20 @@
         mapLocation.push(mapCoordinate);
     }
 
+    function updateRate() {
+        rateLongitudeRight = 0.011/Math.pow(2,scale-7);// (/512)->16;
+        rateLatitudeDown = -0.0102/Math.pow(2,scale-7);// (/512)->16;
+    }
+
+
+    function removeMap(){
+        for (var i = 0; i < mapPlane.length; i++){
+            scene.remove(mapPlane[i]);
+        }
+        mapPlane = [];
+        mapLocation = [];
+    }
+
     function updateMap(){
         var roll = camera.rotation.y;//
         var pitch = camera.rotation.x;//[-pi, 0]
@@ -135,13 +149,14 @@
         //camera mode is a completed mystery, I have to *Math.cos(roll) for movement on z-axis.
 
         //latitude/longitude for the center point
+        updateRate();
         var newLatitude = initLatitude + newCenterZ*rateLatitudeDown;
         var newLongitude = initLongitude + newCenterX*rateLongitudeRight;
 
         for (var i = -1; i <= 1; i ++){
             for (var j = -1; j <= 1; j ++){
-                loadMap(newLatitude+i*0.0102,
-                        newLongitude+j*0.011,
+                loadMap(newLatitude-i*512*rateLatitudeDown,
+                        newLongitude+j*512*rateLongitudeRight,
                         512*j  + newCenterX,
                         -512*i + newCenterZ
                         );
@@ -166,13 +181,13 @@
         //loadMap(22.3363168,114.2659089,0,0);
         //loadMap(22.3261668,114.2659089,0,512); //512->-0.0102, latitude increase, move negative up
 
+        updateRate();
+
         for (var i = -1; i <= 1; i ++){
             for (var j = -1; j <= 1; j ++){
-                loadMap(initLatitude+i*0.0102, initLongitude+j*0.011, 512*j,-512*i);
+                loadMap(initLatitude-i*512*rateLatitudeDown, initLongitude+j*512*rateLongitudeRight, 512*j,-512*i);
             }
         }
-        //Debug:
-        //loadMap(initLatitude, initLongitude, 0, 0, 0);
 
         //the axis
         var axis = new THREE.AxisHelper();
@@ -271,10 +286,52 @@
 
             delayHideTransform();
             updateMap();
-
         } );
 
 
+        controls.domElement.addEventListener('mousewheel', function(event){
+            if(event.ctrlKey){
+                controls.minDistance = controls.constraint.radius_.toFixed();
+                controls.maxDistance = controls.constraint.radius_.toFixed();
+                if(controls.scrollData > 0){
+                    scale ++;
+                    controls.target.x *=2;
+                    controls.target.z *=2;
+                    camera.position.x *=2;
+                    camera.position.z *=2;
+
+                    for (var i = 0; i < positions.length; i++){
+                        positions[i].x*=2;
+                        positions[i].z*=2;
+                    }
+                }
+                else if(controls.scrollData < 0){
+                    scale --;
+                    controls.target.x /=2;
+                    controls.target.z /=2;
+                    camera.position.x /=2;
+                    camera.position.z /=2;
+
+                    for (var i = 0; i < positions.length; i++){
+                        positions[i].x/=2;
+                        positions[i].z/=2;
+                    }
+                }
+                else{
+
+                }
+                removeMap();
+                updateMap();
+                updateShadow();
+                updateText();
+                updatePath(positions);
+            }
+            else{
+                controls.minDistance = 400;
+                controls.maxDistance = 1000;
+            }
+
+        } );
         var hiding;
 
         function delayHideTransform() {
@@ -489,15 +546,17 @@
         }
     }
 
+
     function updateText(){
+        updateRate();
         for (var i = 0; i < positions.length;i++) {
-            text = "(" + positions[i].x.toFixed() + //longitude
-                        "," +  positions[i].z.toFixed() + //latitude
+            var text = "(" + ((initLatitude+positions[i].z.toFixed()*rateLatitudeDown*180/Math.PI)).toFixed(8) + //latitude
+                        "," +  ((initLongitude+positions[i].x.toFixed()*rateLongitudeRight*180/Math.PI)).toFixed(8) + //longitude
                         "," + positions[i].y.toFixed() + //altitude
                         ")";
             textGeo[i].dispose();
             textGeo[i] = new THREE.TextGeometry(text,{
-                size:5,
+                size:15,
                 height:0,
                 font:"helvetiker",
                 curveSegments:1,
@@ -527,6 +586,7 @@
         scene.add(shadowPoint[shadowPoint.length-1]);
 
         //push its text
+        var text = "";//update later
         textGeo.push(new THREE.TextGeometry(text,{
             size:5,
             height:1,

@@ -18,8 +18,8 @@
 		this.target = new THREE.Vector3();
 
 		// Limits to how far you can dolly in and out ( PerspectiveCamera only )
-		this.minDistance = 0;
-		this.maxDistance = Infinity;
+		this.minDistance = 400;
+		this.maxDistance = 1000;
 
 		// Limits to how far you can zoom in and out ( OrthographicCamera only )
 		this.minZoom = 0;
@@ -40,6 +40,8 @@
 		this.enableDamping = false;
 		this.dampingFactor = 0.25;
 
+		this.reachLimit = false;
+		this.radius_ = 0;
 		////////////
 		// internals
 
@@ -113,7 +115,7 @@
 				var te = this.object.matrix.elements;
 
 				// get Y column of matrix
-				v.set( te[ 4 ], te[ 5 ], te[ 6 ] );
+				v.set( te[ 4 ], 0, te[ 6 ] );
 				v.multiplyScalar( distance );
 
 				panOffset.add( v );
@@ -236,9 +238,18 @@
 				phi = Math.max( EPS, Math.min( Math.PI - EPS, phi ) );
 
 				var radius = offset.length() * scale;
+				scope.radius_ = radius;
 
 				// restrict radius to be between desired limits
 				radius = Math.max( this.minDistance, Math.min( this.maxDistance, radius ) );
+				if (scope.radius_ === radius){
+					scope.reachLimit = false;
+				}
+				else{
+					scope.reachLimit = true;
+				}
+				scope.radius_ = radius;
+
 
 				// move target to panned location
 				this.target.add( panOffset );
@@ -366,6 +377,7 @@
 		// Mouse buttons
 		this.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, ZOOM: THREE.MOUSE.MIDDLE, PAN: THREE.MOUSE.RIGHT };
 
+		this.scrollData = 0;
 		////////////
 		// internals
 
@@ -578,12 +590,14 @@
 				// WebKit / Opera / Explorer 9
 
 				delta = event.wheelDelta;
+				scope.scrollData = delta;
 
 			} else if ( event.detail !== undefined ) {
 
 				// Firefox
 
 				delta = - event.detail;
+				scope.scrollData = delta;
 
 			}
 
