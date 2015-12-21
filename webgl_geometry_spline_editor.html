@@ -572,8 +572,8 @@
     function updateText(){
         updateRate();
         for (var i = 0; i < positions.length;i++) {
-            var text = ""+i+": (" + ((initLatitude+positions[i].z.toFixed()*rateLatitudeDown*180/Math.PI)).toFixed(6) + //latitude
-                        ",  " +  ((initLongitude+positions[i].x.toFixed()*rateLongitudeRight*180/Math.PI)).toFixed(6) + //longitude
+            var text = ""+i+": (" + ((initLatitude+positions[i].z*rateLatitudeDown*180/Math.PI)).toFixed(6) + //latitude
+                        ",  " +  ((initLongitude+positions[i].x*rateLongitudeRight*180/Math.PI)).toFixed(6) + //longitude
                         ",  " + positions[i].y.toFixed() + //altitude
                         ")";
             textGeo[i].dispose();
