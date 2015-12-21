@@ -31,7 +31,6 @@
 <script src="js/libs/stats.min.js"></script>
 
 
-
 <script>
 
     String.prototype.format = function () {
@@ -47,7 +46,7 @@
     };
 
     var container, stats;
-    var camera, scene, renderer;
+    var camera, textCamera, scene, textScene, renderer;
     var splineHelperObjects = [],
             splineOutline;
     var splinePointsLength = 4;
@@ -88,10 +87,16 @@
         camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000);
         camera.position.z = 1000;
         scene.add(camera);
+        textCamera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000);
+        textCamera.position.set(-700,800,480); // left/right, reserve, up/down
+        textCamera.lookAt(new THREE.Vector3(-700,0,480));
+        textCamera.rotation.z = 0;
+        textScene.add(textCamera);
     }
 
     function lightInit() {
         scene.add( new THREE.AmbientLight( 0xf0f0f0 ) );
+        textScene.add( new THREE.AmbientLight( 0xf0f0f0 ) );
     }
 
     function loadMap(latitude, longitude, x, z){
@@ -169,7 +174,9 @@
 
         container = document.createElement( 'div' );
         document.body.appendChild( container );
+
         scene = new THREE.Scene();
+        textScene = new THREE.Scene();
 
         //create camera
         cameraInit();
@@ -198,6 +205,7 @@
         renderer.setClearColor( 0xf0f0f0 );
         renderer.setSize( window.innerWidth, window.innerHeight );
         renderer.shadowMap.enabled = true;
+        renderer.autoClear = false;
         container.appendChild( renderer.domElement );
 
         //for the info on top middle
@@ -328,7 +336,7 @@
             }
             else{
                 controls.minDistance = 400;
-                controls.maxDistance = 1000;
+                controls.maxDistance = 2000;
             }
 
         } );
@@ -356,6 +364,20 @@
             if ( hiding ) clearTimeout( hiding );
 
         }
+
+        var text = "Index, Latitude, Longitude, Altitude";
+        var textGeometry = new THREE.TextGeometry(text,{
+                size:15,
+                height:0,
+                font:"helvetiker",
+                curveSegments:1,
+                weight:"normal",
+                style:"normal"
+            });
+        var textGeometryMesh = new THREE.Mesh(textGeometry,material);
+        textGeometryMesh.position.set(0,0,-30);
+        textGeometryMesh.rotateX(-Math.PI / 2);
+        textScene.add(textGeometryMesh);
 
         load( [ new THREE.Vector3(0,0,0),
             new THREE.Vector3( 289.76843686945404, 452.51481137238443, 56.10018915737797 ),
@@ -550,9 +572,9 @@
     function updateText(){
         updateRate();
         for (var i = 0; i < positions.length;i++) {
-            var text = "(" + ((initLatitude+positions[i].z.toFixed()*rateLatitudeDown*180/Math.PI)).toFixed(8) + //latitude
-                        "," +  ((initLongitude+positions[i].x.toFixed()*rateLongitudeRight*180/Math.PI)).toFixed(8) + //longitude
-                        "," + positions[i].y.toFixed() + //altitude
+            var text = ""+i+": (" + ((initLatitude+positions[i].z.toFixed()*rateLatitudeDown*180/Math.PI)).toFixed(6) + //latitude
+                        ",  " +  ((initLongitude+positions[i].x.toFixed()*rateLongitudeRight*180/Math.PI)).toFixed(6) + //longitude
+                        ",  " + positions[i].y.toFixed() + //altitude
                         ")";
             textGeo[i].dispose();
             textGeo[i] = new THREE.TextGeometry(text,{
@@ -563,12 +585,14 @@
                 weight:"normal",
                 style:"normal"
             });
-            scene.remove(textGeometryMesh[i]);
+            textScene.remove(textGeometryMesh[i]);
             textGeometryMesh[i].material.dispose();
             textGeometryMesh[i].geometry.dispose();
             textGeometryMesh[i] = new THREE.Mesh(textGeo[i],material);
-            textGeometryMesh[i].position.set(positions[i].x,positions[i].y,positions[i].z);
-            scene.add(textGeometryMesh[i]);
+            textGeometryMesh[i].position.set( 0, 0, 30 * i);
+            textGeometryMesh[i].rotateX(-Math.PI / 2);
+            textScene.add(textGeometryMesh[i]);
+
         }
     }
 
@@ -660,7 +684,10 @@
 
     function render() {
 
+        renderer.clear();
         renderer.render( scene, camera );
+        renderer.clearDepth();
+        renderer.render(textScene,textCamera);
 
     }
 
