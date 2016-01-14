@@ -140,7 +140,7 @@ THREE.DragControls = function( _camera, _objects, _domElement ) {
 			var xLock, yLock, zLock = false;
 
 			var moveX, moveY, moveZ;
-			
+
 
 			if ( xLock ) {
 				
