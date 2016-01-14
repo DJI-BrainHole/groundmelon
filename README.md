@@ -2,7 +2,15 @@
 
 http://dji-brainhole.github.io/groundmelon
 
-(the loading is quite lag when holding on Github pages)
+How to use:
+
+* left mouse for rotation
+* right mouse to translate
+* wheel to zoom in/out the view
+* CTRL+wheel to zoom in/out the map
+* waypoint is dragable, with its shadow followed on the ground 
+
+(the loading is quite lag when hold on Github Pages, it's better to download and run on localhost)
 
 ![](https://cloud.githubusercontent.com/assets/2766729/12317452/717ccce0-bacc-11e5-99e6-449e35c11a1e.png)
 
