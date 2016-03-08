@@ -205,7 +205,7 @@ Communicator.prototype.uploadWaypoint = function(i) {
         return;
 
     var sequence = "uploadWP"+i;
-    var waypoint = updateWPData(sequence,i,scope.waypointList[i].latitude0,scope.waypointList[i].longitude,scope.waypointList[i].altitude);
+    var waypoint = updateWPData(sequence,i,scope.waypointList[i].latitude,scope.waypointList[i].longitude,scope.waypointList[i].altitude);
     this.socket.send(JSON.stringify(waypoint));
 
     console.log(waypoint);
