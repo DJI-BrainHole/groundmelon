@@ -46,9 +46,9 @@ function Waypoint(position) {
     };
 
     this.updateGPS = function(rateX, rateY, rateZ, init_longitude, init_latitude){
-        scope.longitude = (scope.position.x*rateX + init_longitude).toFixed(6);
-        scope.altitude  = (scope.position.y*rateY).toFixed();
-        scope.latitude  = (scope.position.z*rateZ + init_latitude).toFixed(6);
+        scope.longitude = Math.round((scope.position.x*rateX + init_longitude)*1000000)/1000000;
+        scope.altitude  = Math.round((scope.position.y*rateY));
+        scope.latitude  = Math.round((scope.position.z*rateZ + init_latitude)*1000000)/1000000;
     };
 
     this.updateText = function(index,scene){
