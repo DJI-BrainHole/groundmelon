@@ -63,40 +63,13 @@
 
     var map;
     var container, states, options;
-    init();
-    animate();
 
-
-    function init() {
+    //22.3363168, 114.2659089
+    function init(initLatitude, initLongitude) {
 
         container = document.createElement('div');
         document.body.appendChild(container);
-        map = new DJIMap(container);
-
-        //for the info on top middle
-        var info = document.createElement('div');
-        info.style.position = 'absolute';
-        info.style.top = '10px';
-        info.style.width = '100%';
-        info.style.textAlign = 'center';
-        info.innerHTML = 'M100 GroundStation';
-        options = document.createElement('div');
-        options.style.position = 'absolute';
-        options.style.top = '30px';
-        options.style.width = '100%';
-        options.style.textAlign = 'center';
-
-        options.innerHTML = 'Waypoints: <input type="button" onclick="addPoint();" value="+" />\
-        <input type="button" onclick="removePoint();" value="-" />\
-        <br>\
-        <input type="button" onclick="openGS(0);" value="Open Groundstation" />\
-        <input type="button" onclick="uploadMission(0);" value="Upload Mission" />\
-        <input type="button" onclick="startMission(0);" value="Start Mission" />';
-        //You can add whatever other functional buttons as you like
-
-
-        container.appendChild(info);
-        container.appendChild(options);
+        map = new DJIMap(container,initLatitude, initLongitude);
 
         stats = new Stats();
         stats.domElement.style.position = 'absolute';
@@ -109,18 +82,27 @@
             new THREE.Vector3(-91.40118730204415, 30, -6.958271935582161),
             new THREE.Vector3(-383.785318791128, 10, 47.869296953772746)]);
 
+        animate();
     }
 
-    function openGS(index){
-        map.mission[index].openGS();
+    function movedrone(x,y,z){
+        //map.aircraft[0].SetPosition(new THREE.Vector3(289.76843686945404, 20, 56.10018915737797));
+        map.aircraft[0].SetPosition(new THREE.Vector3(x, y, z));
+    }
+    function reload(){
+        location.reload();
     }
 
-    function uploadMission(index){
-        map.mission[index].uploadMission();
+    function openGS(){
+        map.mission[0].openGS();
     }
 
-    function startMission(index){
-        map.mission[index].startMission();
+    function uploadMission(){
+        map.mission[0].uploadMission();
+    }
+
+    function startMission(){
+        map.mission[0].startMission();
     }
 
     function addPoint() {

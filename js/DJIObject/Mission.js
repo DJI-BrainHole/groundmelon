@@ -22,11 +22,6 @@ function Mission (scene1,scene2){
     var rateLongitudeRight, rateLatitudeDown;
     var init_latitude, init_longitude;
 
-    this.initWebSocket = function(socket){
-        scope.websocket = new Communicator(socket);
-        scope.websocket.updateMissionList(scope.waypoints);
-    };
-
     this.initOnboardSDK = function(){
         scope.sdk = new OnboardSDK();
     };
@@ -72,7 +67,7 @@ function Mission (scene1,scene2){
         else {
             position = {
                 x: Math.random() * 1000 - 500,
-                y: Math.random() * 600,
+                y: Math.random() * 50,
                 z: Math.random() * 800 - 400
             };
         }
@@ -87,9 +82,6 @@ function Mission (scene1,scene2){
     };
 
     this.removePoint = function(){
-        if ( scope.waypoints.length<= 2 ) {
-            return;
-        }
         scope.destructPoint(scope.waypoints.pop());
         scope.subObject.pop();
 

@@ -84,9 +84,7 @@ function createSky(scene) {
     scene.add(skyMesh);
 }
 
-var aircraft = new Aircraft();
-
-function loadM100(scene) {
+function loadM100(scene, aircraft) {
     var loader = new THREE.OBJMTLLoader();
     loader.load( 'data/m100_body.obj', 'data/m100_body.mtl', function ( object ) {
         aircraft.Unload();

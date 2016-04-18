@@ -2,7 +2,7 @@
  * Created by Phoenix on 2015/12/23.
  */
 
-function DJIMap(container) {
+function DJIMap(container,initLatitude,initLongitude) {
     //init latitude/init longitude
     var scope = this;
 
@@ -28,8 +28,8 @@ function DJIMap(container) {
     var material = new THREE.MeshBasicMaterial({color: 0xff0000});
 
     //default centre
-    this.initLatitude = 22.3363168;
-    this.initLongitude = 114.2659089;
+    this.initLatitude = initLatitude;//22.3363168;
+    this.initLongitude = initLongitude;//114.2659089;
 
     var scale = 18;  //default scaler
     var rateLongitudeRight = 0.011/Math.pow(2,scale-7);// (/512)->16;
@@ -66,6 +66,7 @@ function DJIMap(container) {
 
     //the aircraft list and mission list
     this.aircraft.push( new Aircraft());
+    loadM100(scene, this.aircraft[0]);
     this.mission.push(new Mission(scene,textScene));
 
     //the init map
@@ -185,7 +186,7 @@ function DJIMap(container) {
             else{
 
             }
-            removeMap();
+            scope.removeMap();
             updateMap();
 
             updateEveryMission();
@@ -236,7 +237,6 @@ function DJIMap(container) {
     textGeometryMesh.rotateX(-Math.PI / 2);
     textScene.add(textGeometryMesh);
 
-    loadM100(scene);
     createSky(scene);
 
 
@@ -284,13 +284,13 @@ function DJIMap(container) {
         mapLocation.push(mapCoordinate);
     }
 
-    function removeMap(){
+    this.removeMap = function(){
         for (var i = 0; i < mapPlane.length; i++){
             scene.remove(mapPlane[i]);
         }
         mapPlane = [];
         mapLocation = [];
-    }
+    };
 
     function updateMap(){
         var roll = camera.rotation.y;//
@@ -329,9 +329,5 @@ function DJIMap(container) {
         controls.update();
         transformControl.update();
     };
-
-    //add mission
-
-    //remove mission (with index)
 
 }
