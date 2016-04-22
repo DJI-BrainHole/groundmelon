@@ -28,12 +28,12 @@ function Waypoint(position) {
     this.torus = new THREE.Mesh(torusGeometry, material);
     this.torus.rotateX(-Math.PI/2);
 
-    this.textMesh = new THREE.Mesh();
+    //this.textMesh = new THREE.Mesh();
 
-    this.addScene = function(scene,textScene){
+    this.addScene = function(scene){
         scene.add(scope.object);
         scene.add(scope.torus);
-        textScene.add(scope.textMesh);
+        //textScene.add(scope.textMesh);
     };
 
 
@@ -51,6 +51,7 @@ function Waypoint(position) {
         scope.latitude  = Math.round((scope.position.z*rateZ + init_latitude)*1000000)/1000000;
     };
 
+    /*
     this.updateText = function(index,scene){
         scene.remove(scope.textMesh);
         scope.textMesh.material.dispose();
@@ -72,6 +73,7 @@ function Waypoint(position) {
         scene.add(scope.textMesh);
         textGeometry.dispose();
     };
+    */
 
 
 
@@ -79,7 +81,7 @@ function Waypoint(position) {
         scope.position = null;
         scope.torus.material.dispose();
         scope.torus.geometry.dispose();
-        scope.textMesh.material.dispose();
-        scope.textMesh.geometry.dispose();
+     //   scope.textMesh.material.dispose();
+     //   scope.textMesh.geometry.dispose();
     }
 }

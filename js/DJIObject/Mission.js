@@ -7,12 +7,12 @@
  *
  */
 
-function Mission (scene1,scene2){
+function Mission (scene1){
     var scope = this;
     var isGSOpened = 0;
 
     this.scene = scene1;
-    this.textScene = scene2;
+    //this.textScene = scene2;
     this.waypoints = [];
     this.lines = [];
 
@@ -73,7 +73,7 @@ function Mission (scene1,scene2){
         }
 
         var newWaypoint = new Waypoint(position);
-        newWaypoint.addScene(scope.scene,scope.textScene);
+        newWaypoint.addScene(scope.scene);
         scope.waypoints.push(newWaypoint );
         scope.subObject.push(newWaypoint.object);
 
@@ -91,7 +91,7 @@ function Mission (scene1,scene2){
     this.destructPoint = function(waypoint){
         scope.scene.remove(waypoint.object);
         scope.scene.remove(waypoint.torus);
-        scope.textScene.remove(waypoint.textMesh);
+        //scope.textScene.remove(waypoint.textMesh);
         waypoint.destructor();
     };
 
@@ -143,7 +143,7 @@ function Mission (scene1,scene2){
         for (var i = 0; i < scope.waypoints.length;i++){
             scope.waypoints[i].updateGPS(rateLongitudeRight, 1, rateLatitudeDown, init_longitude, init_latitude);
             scope.waypoints[i].updateTorus();
-            scope.waypoints[i].updateText(i,scope.textScene);
+            //scope.waypoints[i].updateText(i,scope.textScene);
         }
 
         //update Path

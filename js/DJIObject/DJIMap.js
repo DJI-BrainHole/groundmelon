@@ -16,8 +16,8 @@ function DJIMap(container,initLatitude,initLongitude) {
         flat = true;
     };
 
-    var scene, textScene;
-    var camera, textCamera;
+    var scene;//, textScene;
+    var camera;//, textCamera;
     var renderer;
     var controls,transformControl;
     var mapPlane = [];
@@ -44,7 +44,7 @@ function DJIMap(container,initLatitude,initLongitude) {
 
     //two scenes
     scene = new THREE.Scene();
-    textScene = new THREE.Scene();
+    //textScene = new THREE.Scene();
 
 
     //camera init
@@ -54,20 +54,20 @@ function DJIMap(container,initLatitude,initLongitude) {
     //camera.rotation.z = 0;
     camera.position.z = 1000;
     scene.add(camera);
-    textCamera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000);
-    textCamera.position.set(-700,800,480); // left/right, reserve, up/down
-    textCamera.lookAt(new THREE.Vector3(-700,0,480));
-    textCamera.rotation.z = 0;
-    textScene.add(textCamera);
+    //textCamera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000);
+    //textCamera.position.set(-700,800,480); // left/right, reserve, up/down
+    //textCamera.lookAt(new THREE.Vector3(-700,0,480));
+    //textCamera.rotation.z = 0;
+    //textScene.add(textCamera);
 
     //the light
     scene.add( new THREE.AmbientLight( 0xf0f0f0 ) );
-    textScene.add( new THREE.AmbientLight( 0xf0f0f0 ) );
+    //textScene.add( new THREE.AmbientLight( 0xf0f0f0 ) );
 
     //the aircraft list and mission list
     this.aircraft.push( new Aircraft());
     loadM100(scene, this.aircraft[0]);
-    this.mission.push(new Mission(scene,textScene));
+    this.mission.push(new Mission(scene));
 
     //the init map
     updateRate();
@@ -222,6 +222,7 @@ function DJIMap(container,initLatitude,initLongitude) {
 
     }
 
+    /*
     //add text in textScene
     var text = "Index, Latitude, Longitude, Altitude";
     var textGeometry = new THREE.TextGeometry(text,{
@@ -236,6 +237,7 @@ function DJIMap(container,initLatitude,initLongitude) {
     textGeometryMesh.position.set(0,0,-30);
     textGeometryMesh.rotateX(-Math.PI / 2);
     textScene.add(textGeometryMesh);
+    */
 
     createSky(scene);
 
@@ -321,8 +323,8 @@ function DJIMap(container,initLatitude,initLongitude) {
     this.rendererUpdate = function(){
         renderer.clear();
         renderer.render( scene, camera );
-        renderer.clearDepth();
-        renderer.render(textScene,textCamera);
+        //renderer.clearDepth();
+        //renderer.render(textCamera);
     };
 
     this.controlUpdate = function(){
